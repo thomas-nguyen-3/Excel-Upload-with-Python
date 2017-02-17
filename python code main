@@ -1,0 +1,83 @@
+##NORMAL CURSOR: DATA SAVE IN ARRAY - WE DONT USE THIS
+cur = db.cursor()
+##DICTIONARY CURSOR: DATA SAVE AS DICTIONARY (SAVE TIME) - USE THIS
+d_cur = db.cursor(MySQLdb.cursors.DictCursor)
+######
+
+##STAGE 1: MAIN PAGE
+if action =='show_upload':
+  d_cur.execute ('SELECT uploadID, DATE_FORMAT(uploadTime,"%m/%d/%Y %H:%i") uploadTime,fileName, REPLACE(MAX(query),"\n"," </br>") query FROM '+db1+'.'+tbl+' GROUP BY uploadID')
+  rdata = d_cur.fetchall();
+  jdata = json.dumps(rdata)
+
+##STAGE 2: CHOOSE COLUMN HEADERS
+elif action == 'select_cols':
+      from openpyxl import load_workbook
+      fileitem = form['file_data']
+      uploadFileName = fileitem.filename
+      if fileitem.filename:
+        wb = load_workbook(fileitem.file)
+        ws = wb.active
+        rows=[x for x in ws.iter_rows()];
+        headers=[x.value for x in rows[0]]
+        data=[]
+        for col in rows[1:]:
+          c=[x.value for x in col]
+          dc={}
+          for (i,h) in enumerate(headers):
+            if not c[i] is None: 
+              if type(c[i]) is datetime.datetime:
+                c[i]=str(c[i])
+              dc[h]=c[i]
+          data.append(dc)
+          
+##STAGE 3: SAVE COLUMN HEADERS + DATA AS JSON        
+elif action =='save_file':
+    ##DECODE THE DATA
+    data=json.loads(base64.b64decode(form_dict.get('data')))
+    ##GET THE SELECTED COLULMNS - [colmn1, column1, ...columnn]
+    cols=form.getlist("col")
+    ##GET THE UPLOAD FILE-NAME
+    uploadFileName = form_dict.get('FileName')
+    try:
+      cur.execute('SELECT ifnull(max(uploadID)+1,1) FROM '+db1+'.'+tbl);
+      inputID=cur.fetchone()[0];
+      i=0;
+      sug_query_n=''
+      ## sample query segment: JSON_UNQUOTE(data->"$.""Date DCE PreLITT""") "Date DCE PreLITT", 
+      sug_query_n+='SELECT uploadID, \n'
+      ##LOOP THROUGH THE SELECTED COLUMNS AND GENERTE A GENERAL QUERY
+      for c in cols:
+        sug_query_n+='JSON_UNQUOTE(data->"$.""'+ c +'""") "'+ c +'", \n'
+      ##REMOVE THE COMMA FOR THE LAST EXCEL ROWS
+      sug_query_n = sug_query_n[:-3]
+      sug_query_n+=' \n'
+      sug_query_n+='FROM '+str(db1)+'.'+str(tbl)+' where uploadID = '+ str(inputID)
+      for row in data:
+        i=i+1
+        tmp={}
+        ##ONLY TAKE THE SELECTED EXCEL HEADERS
+        for c in cols:
+          ##CHECK IF KEY "C" EXIST IN DICTIONARY "ROW"
+          if c in row:
+            ##print("insert --> "+str(c)+" : "+str(row[c]))
+            tmp[c]=str(row[c]).strip()
+        ##INSERT QUERY STATEMENT TO FIRST CELL ONLY
+        if i==1:
+          q='insert into '+db1+'.'+tbl+' (data,uploadID,uploadTime,fileName,query) values (%s,%s,now(),%s,%s)'
+          v=(json.dumps(tmp),inputID,uploadFileName,sug_query_n)
+          cur.execute(q,v)
+        ##INSERT QUERY STATEMENT TO FIRST CELL ONLY
+        elif i>1:  
+          q='insert into '+db1+'.'+tbl+' (data,uploadID,uploadTime,fileName) values (%s,%s,now(),%s)'
+          ##q="insert into venus_diagram.volumntrial (data) values (%s)"
+          v=(json.dumps(tmp),inputID,uploadFileName)
+          cur.execute(q,v)
+
+      ## REMEMBER TO CHECK THIS ONE
+      db.commit()
+
+    except:
+      raise
+    finally:
+      db.close()
