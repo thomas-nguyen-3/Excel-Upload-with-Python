@@ -1,0 +1,336 @@
+#if not $action in ('show_upload','select_cols','save_file')
+  #pass
+#else
+Content-Type: text/html
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" >
+    <meta name="description" content=" Excel Upload" >
+    <meta name="author" content="" >
+
+    <link rel="stylesheet" type="text/css" href="/css/normalize.css" >
+    <link rel="stylesheet" href="/jquery-ui-themes-1.11.4/themes/smoothness/jquery-ui.min.css" type="text/css" >
+    <link rel="stylesheet" type="text/css" href="/bootstrap-3.3.7-dist/css/bootstrap.min.css" >
+    ##<link rel="stylesheet" type="text/css" href="/bootstrap-3.3.7-dist/css/bootstrap-theme.min.css" >
+    <link rel="stylesheet" type="text/css" href="/bootstrap-table-filter-master/src/bootstrap-table-filter.css" >
+    ##<link rel="stylesheet" href="/CLEditor/jquery.cleditor.css" />
+    ##<script src="/bootstrap-table/docs/assets/bootstrap/js/bootstrap.min.js"></script>
+    
+    ## jQUERY
+    <link rel="stylesheet" href="/bootstrap-table/src/bootstrap-table.css">   
+    ##<script src="/js/jquery-1.10.2.js" ></script>
+    <script src="/js/jquery-1.11.1.min.js" ></script>
+    <script type="text/javascript" src="/jquery-ui-1.11.4/jquery-ui.min.js" ></script>
+    <script src="/bootstrap-3.3.7-dist/js/bootstrap.min.js" ></script>
+    
+    <!--  Table extention -->
+    <script src="/bootstrap-table/src/bootstrap-table.js"></script>
+    <script src="/bootstrap-table/src/extensions/flat-json/bootstrap-table-flat-json.js"></script>
+    <script src="/bootstrap-table/src/extensions/multiple-sort/bootstrap-table-multiple-sort.js"></script>
+    <script src="/bootstrap-table/src/extensions/resizable/bootstrap-table-resizable.js"></script>
+    <script src="/bootstrap-table/dist/extensions/export/bootstrap-table-export.min.js"></script>
+    <script src="/bootstrap-table/src/extensions/filter/bootstrap-table-filter.js"></script> 
+    <script src="/tableExport.jquery.plugin-master/jquery.base64.js"></script>
+    <script src="/tableExport.jquery.plugin-master/tableExport.js"></script>
+    <script src="/bootstrap-table/src/extensions/editable/bootstrap-table-editable.js"></script>
+    <script src="/bootstrap-table-filter-master/src/bootstrap-table-filter.js"></script>
+    <script src="/bootstrap-table-filter-master/src/bootstrap-table-filter.js"></script>
+    <script src="/js/menu.js" ></script>
+    ##src/bootstrap-table-filter.js   <script src="assets/bootstrap-table-filter/bs-table.js"></script>
+    ##<script src="/bootstrap-table-1.10.1/src/extensions/filter-control/bootstrap-table-filter-control.js"></script>  
+    ##<script src="/bootstrap-table/dist/extensions/key-events/bootstrap-table-key-events.js"></script>
+    ##<link rel="stylesheet" href="/css/jqsimplemenu.css" type="text/css" media="screen" />
+    ##<link href="//cdnjs.cloudflare.com/ajax/libs/x-editable/1.5.0/bootstrap3-editable/css/bootstrap-editable.css" rel="stylesheet"/>
+    ##<script src="//cdnjs.cloudflare.com/ajax/libs/x-editable/1.5.0/bootstrap3-editable/js/bootstrap-editable.min.js"></script>
+    <script type="text/javascript" src="/js/jqsimplemenu.js"></script>
+    <script language="javascript" type="text/javascript" src="/bootstrap-filestyle-1.2.1/bootstrap-filestyle.min.js"></script>
+    <style>
+      /* Custom container */
+      .container_full {
+      margin: 0 auto;
+      width: 90%;
+      }
+      ##\#tblResults {white-space:nowrap}
+      ##.modal{
+      ##    display: block !important;
+      ##}
+      .modal-dialog{
+            overflow-y: initial !important
+      }
+      .modal-body{
+        max-height: 900px;
+        ##overflow-y: auto;
+        overflow-x: auto;
+      }
+    </style>  
+  </head> 
+
+  <body>
+  #if $action=='show_upload'
+   <div class="container container_full">
+      <h1><span class="glyphicon glyphicon-folder-open" aria-hidden="true"></span>&nbsp;&nbsp;Import Excel or .CSV File </h1><p><br></p>
+      ##<div class="col-xs-12 col-md-8">
+      <div>
+          <div class="panel panel-default">
+          <div class="panel-heading"> After choosing excel, or csv file, click "Upload File" button to view its headers </div>
+            <div class="panel-body">
+              <form action='report.py?blob=$blob&action=select_cols' method='post' enctype="multipart/form-data" >
+                  <input type="file" name='file_data' class="filestyle" data-buttonBefore="true" data-size="md" data-placeholder="No file selected" ><p></p>  
+
+                ## this hidden file provide the value action = save_file for python code 
+                <input type='hidden' name='action' value='select_cols'>
+                <input type='hidden' name='blob' value='$blob'>
+                <input type='submit' value ='Upload file' class="btn btn-default">
+              </form>
+            </div>  
+          </div>
+          <p><br></p>
+          <H2><bold>** File List **</bold></H2>
+              <div id="filter-bar"> </div>
+              <table id='table'
+               ## class='table'
+               ## data-toggle='table'
+               data-search="true"
+               data-flat="false" 
+               data-show-columns="true"
+               data-show-multi-sort="true"
+               data-show-toggle="true"
+               data-pagination="true"
+               data-page-list="[10, 25, 50, 100, ALL]"
+               data-page-size=50
+               data-sort-priority='[{"sortName": "uploadID","sortOrder":"desc"}]'
+               ##data-url=$url
+               data-show-refresh="true"
+               data-side-pagination="client"
+               data-show-export="true"
+               data-filter-control="false"
+               data-filter-show-clear="true"
+               data-filters="false">
+               </table>
+          <script>
+             \$( document ).ready(function() {
+               ##PASS JSON DATA TO CHHEETHA
+               data = $jdata;   
+               ##console.log(data)
+             }); 
+             \$(document).on('click','.btdata',function(evt){
+               ##console.log(evt.target.id)
+               ##console.log(\$(this).attr('id'))
+               ## GET THE UPLOAD ID , PASSING IT TO DB AND GET THE DATA FOR IT
+               clear_modal_dialog();
+               var cid = \$(this).attr('id')
+               \$.get('report.py?blob=$blob&action=uploadid_request',
+                      {cid:cid},
+                      function(res){
+                        refresh_modal_dialog(res,cid)
+                      }
+               )            
+             }); 
+
+             \$(function(){
+               \$('#table').bootstrapTable({
+                   toolbar: '#filter-bar',
+                   ##showFilter: true,
+                   sortName: 'uploadID',
+                   sortOrder: 'desc',
+                   data: data,
+                   columns: [
+                     ##{ title:'ID', field: 'uploadID',    sortable: true, visible: true },
+                     ##{ title:'ID', field: 'uploadID',    sortable: true, visible: true, formatter: operateFormatter },
+                     { title:'View Data', field: 'uploadID',   width:'100px', sortable: true, visible: true, formatter: operateFormatter1 },
+                     { title:'fileName',field: 'fileName',     sortable: true, visible: true}, 
+                     { title:'uploadTime',field: 'uploadTime',    sortable: true, visible: true},
+                     { title:'query',field: 'query', width:'50%',    sortable: true, visible: true}
+                   ]
+                 });
+                
+               \$('#table1').on('expand-row.bs.table', function (e, index, row, \$detail) {
+                 ##console.log(e);
+                 console.log(index);
+                 console.log(row.id);
+                 console.log(\$detail);
+               });
+               \$('.btdata').on('expand-row.bs.table', function (e, index, row, \$detail) {
+                 ##console.log(e);
+                 console.log(index);
+                 ##console.log(row);
+                 console.log(\$detail);
+               })
+             });
+             function operateFormatter1(value, row, index) {
+                 return [
+                     '<button type="button" id="'+value+'"  class="btn btn-primary btn-sm btdata" data-toggle="modal" data-target="\#myModal">'+value+'</button>'
+                 ].join('');
+             }
+             function clear_modal_dialog(){
+               \$('#tblResults').empty();
+                
+             }
+             function refresh_modal_dialog(res,cid){
+               ##console.log(cid)
+               ##console.log(res.length)
+               clear_modal_dialog();
+               json=res.data
+               header = res.header
+               ##console.log(header)
+               ##console.log(json)
+               var html = '';
+               html += '<thead><tr>';
+               ##POPULATE TABLE HEADER
+               html += '<thead><tr>';
+               \$.each(header, function(key, value){
+                   html += '<th>'+value+'</th>'
+               });
+               html += '</tr></thead>';              
+               ##POPULATE TABLE DATA
+               for (var i=0;i<json.length;++i)
+               {
+                 // loop through all the json objects and for every key add a column with the value
+                   html += '<tbody><tr>';
+                   \$.each(header, function(key, value){
+                     ##if not json[i]
+                     cell = json[i][value]
+                     if (typeof cell === "undefined") {
+                       html += '<td></td>' ;
+                     } 
+                     else {html += '<td>'+cell+'</td>' ;}
+                   });
+                 html += '</tr></tbody>';
+               }
+               // push all the html in one go to the page
+               \$('#tblResults').append(html);
+             }
+                
+          </script>
+        
+          <p><br><br></p>        
+          <span class='label label-info' id="upload-file-info"></span>
+          <div class="panel panel-info">
+                <div class="panel-heading">Note: The goals of this excel upload are:</div>
+                <div class="panel-body">
+                    <ul >
+                      <li >User chooses an excel, or csv file to upload</li>
+                      <li >User decides which columns to enter into db</li>
+                      <li >After submit, data is stored as json data to db</li>
+                    </ul>
+                </div>
+          </div>
+          
+
+      </div>
+    
+      <div id="myModal" class="modal fade" role="dialog">
+        <div class="modal-dialog modal-lg" style="position: relative; overflow: hidden; width:96% !important;">
+          <!-- Modal content-->
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal">&times;</button>
+              <h4 id="report_id" class="modal-title">Detail </h4>
+              <input id="report_var" type="hidden" name="report_var">
+            </div>
+            <div class="modal-body" id="modal_detail_body">
+                <ul class="nav nav-tabs">
+                  <li class="active"><a data-toggle="pill" href="#home">Versions</a></li>
+                  <li><a data-toggle="pill" href="#menu1">Edit</a></li>
+                </ul>
+                <div class="tab-content">
+                  <div id="home" class="tab-pane fade in active">
+                    ##<div class="panel panel-info">
+                    ##  <div class="panel-heading">
+                    ##    Name:&nbsp; <spand class ="report_name">Report Name</spand ><br> Description:&nbsp; <spand class ="report_description">Report Name</spand ></div>                    
+                        <table id ="tblResults" 
+                               data-toggle="table" 
+                               data-toolbar="#toolbar" 
+                               ##data-search="true" 
+                               data-show-export="true"
+                        >
+                        </table>                    
+                    ##</div>
+                  </div>
+                  <div id="menu1" class="tab-pane fade">
+                    <div class="panel panel-info">
+                      <div class="panel-heading pannel_edit">Name:&nbsp;<a href="#" class ="report_name edit editable-click">
+                         </a><br> Description:&nbsp;<a href="#" class ="report_description edit_template editable-click">  </a></div>                     
+                        <table class="table table-striped table-condensed">
+                          <thead>
+                            <tr>
+                              <th>Underconstruction<th>
+
+                            </tr>
+                          </thead>
+                          <tbody id="edit_table">
+                          </tbody>
+                        </table>           
+                    </div>
+                  </div>
+
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+   </div>  
+
+  #elif $action=='select_cols'  
+    <div class="container">
+    ##console.log($uploadFileName)
+      <p>Select which columns to be inserted into database (unchecked columns will not be inserted), <br> then click "submit" button at the end to finish the import. </p> 
+      <form action='report.py?blob=$blob&action=save_file' method='post' >
+        <input type='hidden' name='data' value="$base64.b64encode($json.dumps($data))">
+        <input type='hidden' name='action' value='save_file'>
+        <input type='hidden' name='blob' value='$blob'>
+        <input type='hidden' name='FileName' value='$uploadFileName'>
+        <table>
+          #for ($i,$h) in $enumerate($headers)
+          <tr><td><input checked type="checkbox" name="col" value="$h"></td><td>$h</td></tr>
+          #end for
+        </table>
+        <input type='submit'>
+      </form>
+
+    </div>  
+
+  #elif $action=='save_file'
+    <script>
+    \$( document ).ready(function() {
+       delayRedirect();
+    }); 
+
+    function delayRedirect(){
+      document.getElementById('delayMsg').innerHTML = 'FEELING LUCKY TODAY? ^_^  YOU CAN VIEW THE QUERY AFTER <span id="countDown">5</span> SECONDS....';
+      var count = 5;
+      setInterval(function(){
+          count--;
+          document.getElementById('countDown').innerHTML = count;
+          if (count == 0) {
+             var win = window.open('report.py?blob=$blob&action=show_upload', '_self');
+             win.focus();
+          }
+      },1000);
+    }
+    </script>  
+    <div class="container">
+      <p><br></p>
+          <span class='label label-info' id="upload-file-info"></span>
+          <div class="panel panel-info">
+                <div class="panel-heading"><div id="delayMsg"></div></div>
+                <div class="panel-body">
+                   <p> $i rows were inserted <br>
+                   uploadID is : $inputID <br>
+                   Upload is completed !! <br><br>
+                </div>
+          </div>
+    </div>  
+  #end if
+  </body>
+</html>
+#end if
+  
