@@ -1,35 +1,93 @@
-##NORMAL CURSOR: DATA SAVE IN ARRAY - WE DONT USE THIS
+import cgi,json,time,datetime,base64,MySQLdb,MySQLdb.cursors
+action=form_dict.get('action','show_upload')
+##production table
+db1 = form_dict.get('db1','ClinicalStudies')
+tbl = form_dict.get('table','excelUpload')
+
+#testing table:
+##db1 = form_dict.get('db1','venus_diagram')
+##tbl = form_dict.get('table','volumntrial')
+
+db = MySQLdb.connect(host='XXX',    # your host, usually localhost
+                     user="XXX",         # your username
+                     passwd="XXX",  # your password
+                     db="XXX")        # name of the data base
+#######CONNECTION NOTE########
+# you must create a Cursor object. It will let
+#  you execute all the queries you need
+# you must create a Cursor object. It will let
+#  you execute all the queries you need
+
+##NORMAL CURSOR: DATA SAVE IN ARRAY - WE MAY NOT USE THIS
 cur = db.cursor()
 ##DICTIONARY CURSOR: DATA SAVE AS DICTIONARY (SAVE TIME) - USE THIS
 d_cur = db.cursor(MySQLdb.cursors.DictCursor)
 ######
-
 ##STAGE 1: MAIN PAGE
 if action =='show_upload':
   d_cur.execute ('SELECT uploadID, DATE_FORMAT(uploadTime,"%m/%d/%Y %H:%i") uploadTime,fileName, REPLACE(MAX(query),"\n"," </br>") query FROM '+db1+'.'+tbl+' GROUP BY uploadID')
   rdata = d_cur.fetchall();
   jdata = json.dumps(rdata)
 
-##STAGE 2: CHOOSE COLUMN HEADERS
+
+##STAGE 1.1: DATA MODEL FOR EACH UPLOAD ID
+elif action == "uploadid_request":
+  import sys
+  upload_id=form_dict.get('cid')
+  print "Content-Type: application/json"
+  print 
+
+  cur.execute ('SELECT JSON_UNQUOTE(data) data FROM '+db1+'.'+tbl+' WHERE uploadID = %s ',upload_id);
+  res = cur.fetchall();
+
+  jdres=[]
+  jdres=[json.loads(x[0]) for x in res]
+  headers = sorted(list(set([i for s in [d.keys() for d in jdres] for i in s])))
+  ##print(headers1)
+  returnData = {'header':headers,"data":jdres} 
+  ##print(json.dumps(jdres))
+  print(json.dumps(returnData))
+
+##STAGE 2: CHECK FOR EXCEL OR CSV, THEN CHOOSE COLUMN HEADERS
 elif action == 'select_cols':
       from openpyxl import load_workbook
-      fileitem = form['file_data']
+
+      fileitem = form['file_data']     
+
       uploadFileName = fileitem.filename
       if fileitem.filename:
-        wb = load_workbook(fileitem.file)
-        ws = wb.active
-        rows=[x for x in ws.iter_rows()];
-        headers=[x.value for x in rows[0]]
-        data=[]
-        for col in rows[1:]:
-          c=[x.value for x in col]
-          dc={}
-          for (i,h) in enumerate(headers):
-            if not c[i] is None: 
-              if type(c[i]) is datetime.datetime:
-                c[i]=str(c[i])
-              dc[h]=c[i]
-          data.append(dc)
+        if uploadFileName.lower().endswith('.csv'):         
+            import csv
+            csvf = csv.reader(fileitem.file.read().splitlines())
+            rows=[x for x in csvf];
+            headers=[x for x in rows[0]]
+            data=[]
+            for col in rows[1:]:
+              c=[x for x in col]
+              dc={}
+              for (i,h) in enumerate(headers):
+                if not c[i] is None: 
+                  if type(c[i]) is datetime.datetime:
+                    c[i]=str(c[i])
+                  dc[h]=c[i]
+              data.append(dc)         
+        else:
+          wb = load_workbook(fileitem.file)
+          ws = wb.active
+
+          rows=[x for x in ws.iter_rows()];
+          ##print(rows)
+          headers=[x.value for x in rows[0]]
+          data=[]
+          for col in rows[1:]:
+            c=[x.value for x in col]
+            dc={}
+            for (i,h) in enumerate(headers):
+              if not c[i] is None: 
+                if type(c[i]) is datetime.datetime:
+                  c[i]=str(c[i])
+                dc[h]=c[i]
+            data.append(dc)
           
 ##STAGE 3: SAVE COLUMN HEADERS + DATA AS JSON        
 elif action =='save_file':
@@ -43,8 +101,7 @@ elif action =='save_file':
       cur.execute('SELECT ifnull(max(uploadID)+1,1) FROM '+db1+'.'+tbl);
       inputID=cur.fetchone()[0];
       i=0;
-      sug_query_n=''
-      ## sample query segment: JSON_UNQUOTE(data->"$.""Date DCE PreLITT""") "Date DCE PreLITT", 
+      sug_query_n='' 
       sug_query_n+='SELECT uploadID, \n'
       ##LOOP THROUGH THE SELECTED COLUMNS AND GENERTE A GENERAL QUERY
       for c in cols:
